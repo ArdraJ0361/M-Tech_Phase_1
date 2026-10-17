@@ -443,7 +443,6 @@ Mtech/
 │   │   │   • compute_rouge()           ← ROUGE-1/2/L for summarization
 │   │   │   • compute_exact_match()     ← normalized string comparison
 │   │   │   • compute_f1()             ← token overlap F1
-│   │   │   • make_compute_metrics_fn() ← wraps metrics for HF Trainer callback
 │   │   │
 │   │   └── evaluator.py
 │   │       • evaluate_model()          ← standalone inference loop:

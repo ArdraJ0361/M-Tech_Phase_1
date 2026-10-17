@@ -14,9 +14,9 @@ print(f"     task={cfg['task']}  model={cfg['model_name_or_path']}")
 
 # 2. Experiment tracker
 from src.utils.experiment_tracker import ExperimentTracker
-tracker = ExperimentTracker("experiments/results.csv")
+tracker = ExperimentTracker("experiments/validate/results.csv")  # scratch file; keeps the real results.csv clean
 tracker.log({"experiment": "validate_run", "model": "qwen-0.5b", "task": "qa", "method": "base", "f1": 0.0})
-print("[OK] ExperimentTracker — wrote experiments/results.csv")
+print("[OK] ExperimentTracker — wrote experiments/validate/results.csv")
 
 # 3. Metrics (requires numpy — skip gracefully if not installed)
 try:

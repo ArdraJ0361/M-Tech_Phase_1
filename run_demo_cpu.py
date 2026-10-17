@@ -255,7 +255,7 @@ def demo_tracker(pre_m, post_m):
     section("Step 5 — Experiment Tracker")
     from src.utils.experiment_tracker import ExperimentTracker
 
-    tracker = ExperimentTracker("experiments/cpu_demo_results.csv")
+    tracker = ExperimentTracker("experiments/cpu_demo/results.csv")
     tracker.log({
         "experiment": "cpu_demo_base",
         "model": "Qwen/Qwen1.5-0.5B",
@@ -280,11 +280,11 @@ def demo_tracker(pre_m, post_m):
     })
     try:
         df = tracker.load()
-        print(f"{PASS} ExperimentTracker: {len(df)} rows in experiments/cpu_demo_results.csv")
+        print(f"{PASS} ExperimentTracker: {len(df)} rows in experiments/cpu_demo/results.csv")
         cols = ["experiment", "method", "exact_match", "f1"]
         print(df[[c for c in cols if c in df.columns]].to_string(index=False))
     except ImportError:
-        print(f"{PASS} ExperimentTracker: rows written to experiments/cpu_demo_results.csv")
+        print(f"{PASS} ExperimentTracker: rows written to experiments/cpu_demo/results.csv")
         print(f"{SKIP} DataFrame display skipped — install pandas: pip install pandas")
 
 

@@ -14,7 +14,7 @@ End-to-end demo of the 3-way comparison at the heart of this M.Tech project:
   Step 5 — Load LLM  (Qwen1.5-7B, 7 B params, zero-shot)
   Step 6 — Run LLM inference        → LLM baseline metrics
   Step 7 — Print 3-way comparison table + per-example predictions
-  Step 8 — Log all 3 runs to experiments/results.csv
+  Step 8 — Log all 3 runs to experiments/demo_quick/results.csv
 
 Why Qwen1.5-7B as the larger-model baseline?
   Same model family as the SLM → fairest possible comparison.
@@ -50,6 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src.utils.logging_setup import setup_logging
 from src.utils.experiment_tracker import ExperimentTracker
 from src.evaluation.metrics import compute_qa_metrics, compute_rouge
+from src.data.prompts import build_qa_prompt, build_summarization_prompt  # same format as training
 
 setup_logging("INFO")
 logger = logging.getLogger(__name__)
@@ -123,23 +124,6 @@ DEMO_SUMMARIZATION_EXAMPLES = [
         "summary": "MIT researchers developed a fast-charging solid-state battery that can charge a phone in under five minutes.",
     },
 ]
-
-# ---------------------------------------------------------------------------
-# Prompt builders
-# ---------------------------------------------------------------------------
-
-def build_qa_prompt(context: str, question: str) -> str:
-    return (
-        f"### Context:\n{context}\n\n"
-        f"### Question:\n{question}\n\n"
-        f"### Answer:\n"
-    )
-
-def build_summarization_prompt(text: str) -> str:
-    return (
-        f"### Article:\n{text}\n\n"
-        f"### Summary:\n"
-    )
 
 # ---------------------------------------------------------------------------
 # Inference helper
@@ -392,7 +376,7 @@ def main():
     # ------------------------------------------------------------------
     # STEP 8 — Log all 3 runs to experiment tracker
     # ------------------------------------------------------------------
-    tracker = ExperimentTracker("experiments/results.csv")
+    tracker = ExperimentTracker("experiments/demo_quick/results.csv")  # toy demo; never mix into the real results.csv
     dataset_name = f"demo_{args.task}"
 
     def _base_row(method, model, metrics, latency):
@@ -416,7 +400,7 @@ def main():
         tracker.log({"experiment": "demo_llm_baseline",
                      **_base_row("LLM_baseline", LLM_MODEL, llm_metrics, llm_lat)})
 
-    logger.info("All 3 runs logged to experiments/results.csv")
+    logger.info("All 3 runs logged to experiments/demo_quick/results.csv")
     print("\n  Full experiment: python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml")
     print("  Summarization : python demo_quick.py --task summarization")
     print("  CPU/low VRAM  : python demo_quick.py --skip_llm\n")

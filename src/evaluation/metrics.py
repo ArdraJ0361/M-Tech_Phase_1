@@ -15,7 +15,6 @@ import re
 import string
 import logging
 from collections import Counter
-from typing import Callable, Optional
 
 import numpy as np
 
@@ -187,49 +186,3 @@ def compute_extraction_metrics(predictions: list[str], references: list[str]) ->
         "f1": round(np.mean(total_f1) * 100, 2) if total_f1 else 0.0,
         "num_examples": len(predictions),
     }
-
-
-# ---------------------------------------------------------------------------
-# HuggingFace Trainer compute_metrics callback factory
-# ---------------------------------------------------------------------------
-
-def make_compute_metrics_fn(task: str, tokenizer) -> Optional[Callable]:
-    """
-    Return a compute_metrics function compatible with HuggingFace Trainer.
-
-    The Trainer passes (predictions, label_ids) as EvalPrediction.
-    We decode the token IDs back to text and compute task metrics.
-    """
-
-    def _decode(token_ids) -> list[str]:
-        token_ids = np.where(token_ids == -100, tokenizer.pad_token_id, token_ids)
-        return tokenizer.batch_decode(token_ids, skip_special_tokens=True)
-
-    def compute_metrics(eval_pred) -> dict:
-        predictions, labels = eval_pred
-        if isinstance(predictions, tuple):
-            predictions = predictions[0]
-
-        # For causal LM, predictions are logits — take argmax
-        if predictions.ndim == 3:
-            predictions = np.argmax(predictions, axis=-1)
-
-        decoded_preds = _decode(predictions)
-        decoded_labels = _decode(labels)
-
-        # Clean up decoded outputs
-        decoded_preds = [p.strip() for p in decoded_preds]
-        decoded_labels = [l.strip() for l in decoded_labels]
-
-        if task == "qa":
-            return compute_qa_metrics(decoded_preds, decoded_labels)
-        elif task == "summarization":
-            return compute_rouge(decoded_preds, decoded_labels)
-        elif task == "classification":
-            return compute_classification_metrics(decoded_preds, decoded_labels)
-        elif task == "extraction":
-            return compute_extraction_metrics(decoded_preds, decoded_labels)
-        else:
-            return {}
-
-    return compute_metrics

@@ -9,6 +9,8 @@ Usage (via run_pilot.py):
 
 from __future__ import annotations
 
+import inspect
+import json
 import logging
 import os
 import time
@@ -20,11 +22,15 @@ from transformers import TrainingArguments, Trainer
 from .model_loader import load_tokenizer, load_base_model, attach_lora
 from ..data.dataset_loader import load_dataset_for_task
 from ..data.preprocessor import get_data_collator
-from ..evaluation.metrics import make_compute_metrics_fn
+from ..evaluation.evaluator import evaluate_model
 from ..utils.experiment_tracker import ExperimentTracker
 from ..utils.config_loader import load_config
 
 logger = logging.getLogger(__name__)
+
+# transformers>=5 dropped `warmup_ratio`; its `warmup_steps` accepts a float ratio instead.
+_WARMUP_KEY = ("warmup_ratio" if "warmup_ratio" in inspect.signature(TrainingArguments.__init__).parameters
+               else "warmup_steps")
 
 
 # ---------------------------------------------------------------------------
@@ -77,13 +83,12 @@ def run_training(config_path: str) -> dict:
         gradient_accumulation_steps=train_cfg.get("gradient_accumulation_steps", 4),
         learning_rate=float(train_cfg.get("learning_rate", 2e-4)),
         weight_decay=float(train_cfg.get("weight_decay", 0.01)),
-        warmup_ratio=float(train_cfg.get("warmup_ratio", 0.03)),
+        **{_WARMUP_KEY: float(train_cfg.get("warmup_ratio", 0.03))},
         lr_scheduler_type=train_cfg.get("lr_scheduler_type", "cosine"),
         fp16=train_cfg.get("fp16", False),
         bf16=train_cfg.get("bf16", False),
-        logging_dir=str(output_dir / "logs"),
         logging_steps=train_cfg.get("logging_steps", 50),
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=train_cfg.get("eval_steps", 200),
         save_strategy="steps",
         save_steps=train_cfg.get("save_steps", 200),
@@ -91,22 +96,22 @@ def run_training(config_path: str) -> dict:
         load_best_model_at_end=train_cfg.get("load_best_model_at_end", True),
         metric_for_best_model=train_cfg.get("metric_for_best_model", "eval_loss"),
         seed=train_cfg.get("seed", 42),
-        report_to="tensorboard",
+        report_to="none",
         dataloader_pin_memory=False,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        # Validation is scored by loss only: keeping full-vocab logits for every
+        # validation token (500 x seq x 152K) is what ran the T4 out of memory.
+        prediction_loss_only=True,
     )
 
     # 6. Trainer
-    compute_metrics = make_compute_metrics_fn(cfg["task"], tokenizer)
-    data_collator = get_data_collator(tokenizer)
-
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset.get("train"),
         eval_dataset=dataset.get("validation"),
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics,
+        data_collator=get_data_collator(tokenizer),
     )
 
     # 7. Train
@@ -117,16 +122,19 @@ def run_training(config_path: str) -> dict:
 
     logger.info("Training complete in %.1f s | peak GPU delta: %.0f MB", train_time, peak_mem_mb)
 
-    # 8. Evaluate on test set
+    # 8. Evaluate on test set by generation -- the same evaluate_model() used for the
+    #    zero-shot baselines, so all three rows of the comparison are scored identically.
     test_metrics = {}
     if "test" in dataset:
         logger.info("Evaluating on test split...")
-        test_metrics = trainer.evaluate(eval_dataset=dataset["test"])
+        metrics = evaluate_model(model, tokenizer, dataset["test"], cfg)
+        test_metrics = {k: v for k, v in metrics.items() if not k.startswith("_")}
         logger.info("Test metrics: %s", test_metrics)
 
-    # 9. Save adapter
+    # 9. Save adapter + training log (loss per step)
     model.save_pretrained(str(output_dir / "adapter"))
     tokenizer.save_pretrained(str(output_dir / "adapter"))
+    (output_dir / "train_log.json").write_text(json.dumps(trainer.state.log_history, indent=1))
 
     # 10. Log to results CSV — guide feedback: include reproducibility fields
     row = {

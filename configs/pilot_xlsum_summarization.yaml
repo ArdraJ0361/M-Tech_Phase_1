@@ -6,7 +6,7 @@
 #      their respective official HF splits (not the same split).
 #   B. model_variant: "base" — document zero-shot limitation in results.
 #   C. Checkpoint selected by validation ROUGE-L only — NOT test ROUGE-L.
-#   D. metric_for_best_model: "eval_rougeL" explicitly set.
+#   D. metric_for_best_model: "eval_loss" (validation, never test) explicitly set.
 
 experiment_name: "xlsum_summarization_lora_pilot"
 task: "summarization"
@@ -78,7 +78,7 @@ training:
   # GUIDE FEEDBACK D: checkpoint selected by validation ROUGE-L only.
   # This is the metric measured on the validation split during training.
   # Test ROUGE-L is only computed after the best checkpoint is selected.
-  metric_for_best_model: "eval_rougeL"
+  metric_for_best_model: "eval_loss"
   # Must match pilot_squad_qa.yaml for reproducible comparison
   seed: 42
 

@@ -16,7 +16,7 @@ We compare **three setups on the same test examples**:
 | Model | Method | Parameters | Role |
 |---|---|---|---|
 | Qwen1.5-0.5B | Zero-shot (base) | 500 M | Baseline — before any tuning |
-| Qwen1.5-0.5B + LoRA | PEFT fine-tuned | 500 M + ~0.4% adapter | **Your contribution** |
+| Qwen1.5-0.5B + LoRA | PEFT fine-tuned | 500 M + 0.169% adapter | **Your contribution** |
 | Qwen1.5-7B | Zero-shot (base) | 7 B | Upper-bound reference |
 
 The key question for each result: *Does the LoRA-adapted small model get closer
@@ -96,7 +96,7 @@ python demo_quick.py --task qa --lora_steps 5 --skip_llm
 This shows:
 1. Qwen1.5-0.5B loaded (500 M params)
 2. Zero-shot inference on 5 QA examples
-3. LoRA attached (trainable params: ~0.4% of total)
+3. LoRA attached (trainable params: 0.169% of total)
 4. 5-step fine-tuning (loss decreases)
 5. Post-tuning inference on same examples
 6. Side-by-side comparison table
@@ -122,8 +122,8 @@ visible but not dramatic. For full evaluation, the pilot trains 3 epochs on
 
 ```python
 from src.utils.experiment_tracker import ExperimentTracker
-tracker = ExperimentTracker("experiments/results.csv")
-tracker.print_summary()
+tracker = ExperimentTracker("experiments/demo_quick/results.csv")  # demo runs
+tracker.print_summary()                                           # real runs: experiments/results.csv
 ```
 
 Every run is logged here automatically with model, method, metrics, latency,
@@ -275,6 +275,7 @@ Mtech/
 │   └── utils/experiment_tracker.py     ← CSV logger
 │
 ├── notebooks/01_review_demo.ipynb       ← interactive 3-way demo
+├── notebooks/simple_pipeline.ipynb      ← full 3-way experiment on Colab T4
 ├── docs/
 │   ├── architecture.md                  ← pipeline architecture reference
 │   ├── literature_notes.md              ← 6 papers annotated

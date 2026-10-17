@@ -75,8 +75,8 @@ training:
   save_steps: 200
   save_total_limit: 2
   load_best_model_at_end: true
-  # Use validation F1 (NOT test F1) for checkpoint selection — guide feedback C.
-  metric_for_best_model: "eval_f1"
+  # Use validation loss (NOT test metrics) for checkpoint selection — guide feedback C.
+  metric_for_best_model: "eval_loss"
   # CRITICAL: This seed controls test split selection.
   # Must be identical in pilot_squad_qa.yaml AND llm_baseline_qwen7b.yaml
   # so both models are evaluated on the exact same 500 test examples.
