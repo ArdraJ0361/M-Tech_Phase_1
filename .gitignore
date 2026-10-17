@@ -30,6 +30,7 @@ data/processed/
 experiments/*/
 !experiments/results.csv
 !experiments/.gitkeep
+CLAUDE.md
 
 # HuggingFace cache
 .cache/
