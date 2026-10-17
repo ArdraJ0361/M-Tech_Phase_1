@@ -1,5 +1,5 @@
 """
-smoke_test.py
+tests/smoke_test.py
 --------------
 Step 1 from the guide's recommended execution order:
 
@@ -23,7 +23,7 @@ What it verifies:
   [9] ExperimentTracker writes results.csv
 
 Run:
-    python smoke_test.py
+    python tests/smoke_test.py
 
 All checks print [OK] or [FAIL] with a clear explanation.
 Exit code 0 = all checks passed. Exit code 1 = at least one check failed.
@@ -35,7 +35,9 @@ import sys
 import os
 import traceback
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+os.chdir(ROOT)  # configs/ and experiments/ paths below are relative to the repo root
 
 PASS = "[OK]"
 FAIL = "[FAIL]"

@@ -16,7 +16,7 @@ task: "qa"                          # qa | summarization | classification | extr
 #   and computational efficiency with a larger model. SQuAD v2 uses Wikipedia
 #   passages — these are text-native pilots, NOT full visual document understanding.
 #   Scanned-document extraction and classification are Phase 2.
-# Status: Data pipeline VALIDATED | Training PENDING | Evaluation PENDING
+# Status: Phase 1 run COMPLETE (2026-10-17, notebooks/simple_pipeline.ipynb) — see experiments/simple/results.csv
 
 # Model
 model_name_or_path: "Qwen/Qwen1.5-0.5B"   # 500M params — the SLM we PEFT-tune

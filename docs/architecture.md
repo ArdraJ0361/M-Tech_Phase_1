@@ -388,7 +388,6 @@ to our LoRA training** — nothing else changed.
 This is where each concept from above lives in the codebase:
 
 ```
-Mtech/
 │
 ├── configs/
 │   ├── pilot_squad_qa.yaml              ← all hyperparams for the QA experiment
@@ -460,10 +459,12 @@ Mtech/
 │       └── logging_setup.py
 │           • setup_logging()           ← configures log level and format
 │
-├── smoke_test.py     ← 9 automated checks that verify the whole pipeline (CPU)
-├── demo_quick.py     ← runs all 3 setups end-to-end and prints comparison table
-├── run_demo_cpu.py   ← instant demo: pipeline + masking + param counts (no download)
-└── validate_setup.py ← pure-Python import check (no GPU or ML deps needed)
+├── notebooks/
+│   ├── simple_pipeline.ipynb  ← self-contained Colab run of the whole QA experiment
+│   └── build_simple_notebook.py ← generates it (edit this, not the .ipynb)
+│
+└── tests/
+    └── smoke_test.py ← 9 automated checks that verify the whole pipeline (CPU)
 ```
 
 ---
@@ -532,20 +533,31 @@ Metric: EM = 1.0 (exact match after normalization)
 
 ---
 
-## Part 11 — What the Results Will Show
+## Part 11 — What the Results Show
 
-When the GPU training runs complete, the results table will look like this:
+Phase 1 QA results (Google Colab T4, 2026-10-17, `notebooks/simple_pipeline.ipynb`,
+raw files in `experiments/simple/`):
 
 ```
-3-WAY COMPARISON  |  Task: QA  |  Dataset: SQuAD v2  |  Test examples: 500
-===========================================================================
-Model / Method                    EM      F1    Latency(ms)  Params
----------------------------------------------------------------------------
-SLM — base (zero-shot)           ??.?   ??.?        ???       0.5B
-SLM + LoRA (PEFT-tuned)  ← OURS  ??.?   ??.?        ???       0.5B
-LLM baseline (zero-shot)         ??.?   ??.?        ???        7B
-===========================================================================
+3-WAY COMPARISON  |  Task: QA  |  Dataset: SQuAD v2  |  Test examples: 500 (250 answerable / 250 unanswerable)
+=====================================================================================================
+Model / Method                    EM      F1    Ans EM  Unans EM  Latency(ms)  Params
+-----------------------------------------------------------------------------------------------------
+SLM — base (zero-shot)            5.6   16.4    11.2      0.0         191      0.5B
+SLM + LoRA (PEFT-tuned)  ← OURS  68.8   72.4    66.4     71.2         150      0.5B (+0.169% adapter)
+LLM baseline (zero-shot, 4-bit)  27.8   36.6    55.6      0.0        1139        7B
+=====================================================================================================
+LoRA training: 3 epochs, 21 min, 4,978 MB peak GPU memory, 786,432 trainable parameters.
 ```
+
+**What this shows for QA:** SLM+LoRA > SLM base by 63 EM points, and SLM+LoRA > LLM baseline —
+overall and on answerable questions alone (66.4 vs 55.6 EM). Neither zero-shot model ever
+answers "unanswerable"; the tuned model learned to abstain (71.2 % correct on unanswerable
+questions) but also over-abstains on 44 answerable ones. Latency is measured in this setup
+(7B in 4-bit at batch 4, 0.5B in fp32 at batch 8), so the speed ratio is indicative.
+Summarization (XL-Sum) is still to be run.
+
+**General reading guide:**
 
 **How to read the results:**
 
