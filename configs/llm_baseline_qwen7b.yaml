@@ -1,0 +1,88 @@
+# LLM baseline — Qwen1.5-7B  (zero-shot, no fine-tuning)
+# ----------------------------------------------------------
+# This is the model we COMPARE AGAINST, not the one we train.
+# Run inference only — no LoRA, no training.
+#
+# GUIDE FEEDBACK B — FAIR COMPARISON REQUIREMENTS:
+#   1. model_variant MUST match pilot_squad_qa.yaml ("base").
+#      Never use an instruct variant here if the SLM uses a base variant.
+#   2. seed MUST match pilot_squad_qa.yaml (42).
+#      This ensures both models are evaluated on the exact same 500 test examples.
+#   3. test_samples MUST match pilot_squad_qa.yaml (500).
+#   4. task instructions in prompts MUST be identical for both models.
+#      The prompt template in dataset_loader.py is shared, so this is automatic.
+#
+# Usage:
+#   python src/training/run_pilot.py \
+#       --config configs/llm_baseline_qwen7b.yaml --base_only
+
+experiment_name: "llm_baseline_qwen1.5_7b"
+task: "qa"
+# Phase 1 validated task ✅
+
+model_name_or_path: "Qwen/Qwen1.5-7B"    # 7B params — the LLM baseline
+tokenizer_name_or_path: null
+# MUST match pilot_squad_qa.yaml — "base" vs "instruct" must be consistent
+model_variant: "base"
+use_flash_attention: false
+
+# No quantization needed for inference-only (use 4 if VRAM < 16 GB)
+load_in_bits: null
+
+# PEFT block is unused for --base_only, but required by config schema
+peft:
+  method: "lora"
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+dataset:
+  name: "rajpurkar/squad_v2"
+  version: "default"      # must match pilot_squad_qa.yaml
+  subset: null
+  text_column: "context"
+  question_column: "question"
+  answer_column: "answers"
+  max_source_length: 512
+  max_target_length: 64
+  train_samples: null   # not used for baseline
+  val_samples: null
+  # MUST be 500 — same as pilot_squad_qa.yaml
+  # Combined with seed: 42 below, this selects the IDENTICAL 500 test examples.
+  test_samples: 500
+
+# training block unused for --base_only, required by config schema
+training:
+  output_dir: "experiments/llm_baseline_qwen7b"
+  num_train_epochs: 0
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 1
+  learning_rate: 0
+  weight_decay: 0
+  warmup_ratio: 0
+  lr_scheduler_type: "constant"
+  fp16: false
+  bf16: true
+  logging_steps: 50
+  eval_steps: 500
+  save_steps: 500
+  save_total_limit: 1
+  load_best_model_at_end: false
+  metric_for_best_model: "eval_f1"
+  # CRITICAL: Must be 42 — same as pilot_squad_qa.yaml
+  # This is the only way to guarantee identical test examples across all 3 models.
+  seed: 42
+
+evaluation:
+  metrics:
+    - "exact_match"
+    - "f1"
+  record_efficiency: true
+
+results_csv: "experiments/results.csv"

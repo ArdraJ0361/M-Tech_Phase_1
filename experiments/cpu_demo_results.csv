@@ -1,0 +1,7 @@
+experiment,model,dataset,task,method,exact_match,f1,model_variant,seed
+cpu_demo_base,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,base_zero_shot,0.0,0.0,base,42
+cpu_demo_peft,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,PEFT_LoRA_5steps,0.0,0.0,base,42
+cpu_demo_base,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,base_zero_shot,0.0,0.0,base,42
+cpu_demo_peft,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,PEFT_LoRA_5steps,0.0,0.0,base,42
+cpu_demo_base,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,base_zero_shot,0.0,0.0,base,42
+cpu_demo_peft,Qwen/Qwen1.5-0.5B,toy_qa_3_examples,qa,PEFT_LoRA_5steps,0.0,0.0,base,42

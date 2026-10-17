@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model weights — never commit
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Data directories (download separately)
+data/raw/
+data/processed/
+
+# Experiment outputs
+experiments/*/
+!experiments/results.csv
+!experiments/.gitkeep
+
+# HuggingFace cache
+.cache/
+
+# Secrets — NEVER commit API keys or tokens
+.env
+secrets.yaml
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
