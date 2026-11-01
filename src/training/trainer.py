@@ -22,7 +22,7 @@ from transformers import TrainingArguments, Trainer
 from .model_loader import load_tokenizer, load_base_model, attach_lora
 from ..data.dataset_loader import load_dataset_for_task
 from ..data.preprocessor import get_data_collator
-from ..evaluation.evaluator import evaluate_model
+from ..evaluation.evaluator import evaluate_model, save_predictions
 from ..utils.experiment_tracker import ExperimentTracker
 from ..utils.config_loader import load_config
 
@@ -122,19 +122,20 @@ def run_training(config_path: str) -> dict:
 
     logger.info("Training complete in %.1f s | peak GPU delta: %.0f MB", train_time, peak_mem_mb)
 
-    # 8. Evaluate on test set by generation -- the same evaluate_model() used for the
+    # 8. Save adapter + training log (loss per step) first, so a failure during
+    #    test evaluation cannot lose the paid-for training run.
+    model.save_pretrained(str(output_dir / "adapter"))
+    tokenizer.save_pretrained(str(output_dir / "adapter"))
+    (output_dir / "train_log.json").write_text(json.dumps(trainer.state.log_history, indent=1))
+
+    # 9. Evaluate on test set by generation -- the same evaluate_model() used for the
     #    zero-shot baselines, so all three rows of the comparison are scored identically.
     test_metrics = {}
     if "test" in dataset:
         logger.info("Evaluating on test split...")
         metrics = evaluate_model(model, tokenizer, dataset["test"], cfg)
-        test_metrics = {k: v for k, v in metrics.items() if not k.startswith("_")}
+        test_metrics = save_predictions(metrics, output_dir / "predictions_lora.csv")
         logger.info("Test metrics: %s", test_metrics)
-
-    # 9. Save adapter + training log (loss per step)
-    model.save_pretrained(str(output_dir / "adapter"))
-    tokenizer.save_pretrained(str(output_dir / "adapter"))
-    (output_dir / "train_log.json").write_text(json.dumps(trainer.state.log_history, indent=1))
 
     # 10. Log to results CSV — guide feedback: include reproducibility fields
     row = {

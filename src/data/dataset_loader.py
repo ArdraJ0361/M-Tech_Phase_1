@@ -24,6 +24,11 @@ XL-Sum English:
   - Provides official train / validation / test splits — used directly.
   - No custom re-splitting required.
 
+virattt/financial-qa-10K:
+  - Ships a single split, so we split it BY COMPANY (ticker): test companies are
+    never seen in training. Uses a fixed seed, so every run gets the same test set.
+  - Adds "unanswerable" examples by pairing questions with another company's passage.
+
 FUNSD:
   - Provides official train / test splits — used directly.
   - The test split is small (50 documents); no further subsampling needed.
@@ -92,6 +97,14 @@ _DATASET_ALIASES = {"squad_v2": "rajpurkar/squad_v2"}
 # the same data with the same official train/validation/test splits.
 _XLSUM_REPO = "csebuetnlp/xlsum"
 _XLSUM_PARQUET = "hf://datasets/csebuetnlp/xlsum@refs%2Fconvert%2Fparquet"
+
+# Financial sentence-answer QA from 10-K filings. Revision pinned so the split is reproducible.
+_FIN10K_REPO = "virattt/financial-qa-10K"
+_FIN10K_REVISION = "30e48b49ef40389cce6488b0bddef7d6f00f4c7a"
+# Fixed, NOT training.seed: extra-seed runs must still score the same test companies.
+_FIN10K_SPLIT_SEED = 42
+_FIN10K_HELDOUT_TICKERS = 7        # for each of validation and test (~10% of 69 companies)
+_FIN10K_UNANSWERABLE_RATIO = 0.2   # added per split, relative to its answerable rows
 
 # Token budget reserved for the "### ... :" headers and newlines of a prompt,
 # so the (possibly truncated) body + headers never exceed max_source_length.
@@ -178,6 +191,8 @@ def _load_raw(name: str, subset: str | None = None):
     from datasets import load_dataset
 
     name = _DATASET_ALIASES.get(name, name)
+    if name == _FIN10K_REPO:
+        return _load_fin10k()
     if name == _XLSUM_REPO:
         lang = subset or "english"
         base = f"{_XLSUM_PARQUET}/{lang}"
@@ -186,6 +201,59 @@ def _load_raw(name: str, subset: str | None = None):
             data_files={s: f"{base}/{s}/*.parquet" for s in ("train", "validation", "test")},
         )
     return load_dataset(name, subset) if subset else load_dataset(name)
+
+
+def _load_fin10k():
+    """Load financial-qa-10K in the SQuAD schema, so `_load_qa` handles it unchanged."""
+    from datasets import load_dataset
+
+    raw = load_dataset(_FIN10K_REPO, revision=_FIN10K_REVISION, split="train")
+    raw = raw.filter(lambda e: all((e[k] or "").strip() for k in ("question", "answer", "context")))
+    return _split_fin10k(raw)
+
+
+def _split_fin10k(raw):
+    """Split rows by ticker into train/validation/test, then add unanswerable examples."""
+    import numpy as np
+    from datasets import Dataset, DatasetDict
+
+    rng = np.random.default_rng(_FIN10K_SPLIT_SEED)
+    tickers = rng.permutation(sorted(set(raw["ticker"]))).tolist()
+    n = _FIN10K_HELDOUT_TICKERS
+    groups = {
+        "validation": set(tickers[:n]),
+        "test": set(tickers[n:2 * n]),
+        "train": set(tickers[2 * n:]),
+    }
+    logger.info("financial-qa-10K test companies: %s", sorted(groups["test"]))
+
+    result = {}
+    for role, group in groups.items():
+        rows = [r for r in raw if r["ticker"] in group]
+        records = [
+            {"context": r["context"], "question": r["question"], "answers": {"text": [r["answer"]]}}
+            for r in rows
+        ]
+        n_unanswerable = int(len(rows) * _FIN10K_UNANSWERABLE_RATIO)
+        for i in rng.choice(len(rows), size=n_unanswerable, replace=False).tolist():
+            records.append({
+                "context": _pick_unrelated_context(rows, rows[i], rng),
+                "question": rows[i]["question"],
+                "answers": {"text": []},
+            })
+        result[role] = Dataset.from_list(records)
+        logger.info("%s: %d answerable + %d unanswerable", role, len(rows), n_unanswerable)
+    return DatasetDict(result)
+
+
+def _pick_unrelated_context(rows: list, row: dict, rng) -> str:
+    """A passage from a different company in the same split that lacks this row's answer."""
+    answer = row["answer"].lower()
+    candidates = [
+        r["context"] for r in rows
+        if r["ticker"] != row["ticker"] and answer not in r["context"].lower()
+    ]
+    return candidates[int(rng.integers(len(candidates)))]
 
 
 # ---------------------------------------------------------------------------
@@ -224,18 +292,25 @@ def _load_qa(ds_cfg: dict, tokenizer, cfg: dict):
         return raw
 
     max_src = ds_cfg["max_source_length"]
+    # Datasets with reworded (not copied) answers set this to false.
+    require_answer_in_context = ds_cfg.get("require_answer_in_context", True)
+    prompt_overhead = len(tokenizer(build_qa_prompt("", ""), add_special_tokens=False)["input_ids"])
 
     def _format(example):
         # Trim the CONTEXT (not the whole sequence) so the question, answer
         # header, answer and EOS always survive tokenization.
         q_len = len(tokenizer(example["question"], add_special_tokens=False)["input_ids"])
-        budget = max(max_src - q_len - _PROMPT_OVERHEAD_TOKENS, 32)
+        budget = max(max_src - q_len - prompt_overhead, 32)
         context = truncate_to_tokens(clean_text(example["context"]), tokenizer, budget)
 
         answer_text = qa_completion(example["answers"])
         # Training guard: an answerable example whose answer was trimmed out of
         # the context would teach the model to hallucinate - flag it for removal.
-        keep = answer_text == UNANSWERABLE or answer_text.lower() in context.lower()
+        keep = (
+            not require_answer_in_context
+            or answer_text == UNANSWERABLE
+            or answer_text.lower() in context.lower()
+        )
 
         prompt = build_training_text(
             build_qa_prompt(context, example["question"]), answer_text, tokenizer.eos_token

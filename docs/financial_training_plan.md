@@ -1,5 +1,8 @@
 # Financial Document Training Plan
 
+> **Superseded for the next run:** training uses `virattt/financial-qa-10K`, not DocFinQA.
+> The reasons and measurements are in [progress.md](progress.md).
+
 **New direction:** pivot Phase 1 / Phase 2 toward financial document analysis —
 fine-tune the SLM on SEC filings / financial QA instead of generic SQuAD v2 /
 XL-Sum. Everything else in the pipeline (LoRA, evaluator, prompt format, serving)

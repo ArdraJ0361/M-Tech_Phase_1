@@ -87,7 +87,7 @@ def _run_base_evaluation(cfg: dict) -> None:
     import torch
     from src.training.model_loader import load_tokenizer, load_base_model
     from src.data.dataset_loader import load_dataset_for_task
-    from src.evaluation.evaluator import evaluate_model
+    from src.evaluation.evaluator import evaluate_model, save_predictions
     from src.utils.experiment_tracker import ExperimentTracker
 
     model_variant = cfg.get("model_variant", "base")
@@ -111,6 +111,7 @@ def _run_base_evaluation(cfg: dict) -> None:
         raise RuntimeError("No test or validation split found. Check dataset config.")
 
     metrics = evaluate_model(model, tokenizer, test_split, cfg)
+    metrics = save_predictions(metrics, Path(cfg["training"]["output_dir"]) / "predictions_base.csv")
     logger.info("Base model metrics: %s", metrics)
 
     tracker = ExperimentTracker(cfg["results_csv"])
@@ -133,7 +134,7 @@ def _run_checkpoint_evaluation(cfg: dict) -> None:
     from pathlib import Path
     from src.training.model_loader import load_tokenizer, load_peft_checkpoint
     from src.data.dataset_loader import load_dataset_for_task
-    from src.evaluation.evaluator import evaluate_model
+    from src.evaluation.evaluator import evaluate_model, save_predictions
     from src.utils.experiment_tracker import ExperimentTracker
 
     checkpoint_path = str(Path(cfg["training"]["output_dir"]) / "adapter")
@@ -146,6 +147,7 @@ def _run_checkpoint_evaluation(cfg: dict) -> None:
     test_split = dataset.get("test") or dataset.get("validation")
 
     metrics = evaluate_model(model, tokenizer, test_split, cfg)
+    metrics = save_predictions(metrics, Path(cfg["training"]["output_dir"]) / "predictions_lora.csv")
     logger.info("Checkpoint metrics: %s", metrics)
 
     tracker = ExperimentTracker(cfg["results_csv"])

@@ -119,15 +119,13 @@ class ExperimentTracker:
         return preferred + extras
 
     def _rewrite_header(self, columns: list[str]) -> None:
-        """Update the CSV header (needed when new columns are added mid-experiment)."""
+        """Rewrite the CSV under new columns, keeping old rows aligned by column name."""
         if not self.path.exists():
             # Nothing to rewrite; header will be written on first append
             return
-        import io
-        content = self.path.read_text(encoding="utf-8")
-        lines = content.splitlines()
-        if not lines:
-            return
-        new_header = ",".join(columns)
-        lines[0] = new_header
-        self.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with self.path.open("r", newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        with self.path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(rows)

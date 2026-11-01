@@ -1,0 +1,65 @@
+# Financial QA with LoRA: sentence answers from SEC 10-K passages.
+# Same hyperparameters as the SQuAD pilot. Run with --base_only for the untuned 0.5B row.
+# Split by company and fixed in dataset_loader.py, so all compared runs share one test set.
+
+experiment_name: "fin10k_lora"
+task: "qa"
+
+model_name_or_path: "Qwen/Qwen1.5-0.5B"
+tokenizer_name_or_path: null
+model_variant: "base"
+use_flash_attention: false
+
+load_in_bits: null
+
+peft:
+  method: "lora"
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+dataset:
+  name: "virattt/financial-qa-10K"
+  version: "default"
+  subset: null
+  # Answers are reworded sentences: only 27% appear word for word in their context.
+  require_answer_in_context: false
+  max_source_length: 512
+  max_target_length: 128      # 96% of answers are <= 64 tokens; the longest is 188
+  train_samples: null         # null = use the whole split
+  val_samples: null
+  test_samples: null
+
+training:
+  output_dir: "experiments/fin10k"
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.03
+  lr_scheduler_type: "cosine"
+  fp16: false
+  bf16: true
+  logging_steps: 50
+  eval_steps: 200
+  save_steps: 200
+  save_total_limit: 2
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  seed: 42
+
+evaluation:
+  metrics:
+    - "exact_match"
+    - "f1"
+    - "rougeL"
+  record_efficiency: true
+
+results_csv: "experiments/results.csv"

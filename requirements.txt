@@ -1,9 +1,10 @@
-# Core ML
-torch>=2.2.0
-transformers>=4.41.0
-datasets>=2.19.0
-peft>=0.10.0
-accelerate>=0.29.0          # used by transformers (device_map, Trainer)
+# Core ML (exact versions tested by configs/dry_run_fin10k.yaml)
+torch==2.15.0
+transformers==5.22.1
+datasets==5.1.0
+peft==0.21.2
+torchao>=0.16              # peft refuses older versions if one is preinstalled
+accelerate==1.15.0          # used by transformers (device_map, Trainer)
 bitsandbytes>=0.43.0        # 4-bit / 8-bit loading (CUDA only)
 
 # Evaluation

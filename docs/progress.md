@@ -59,6 +59,18 @@ Run with `notebooks/simple_pipeline.ipynb` on a Colab T4. Raw files: `experiment
   15 GB 7B download, so the notebook sets `HF_HUB_DISABLE_XET=1`.
 - The base-model score (EM 5.6, F1 16.39) was reproduced exactly on a local CPU run.
 
+## Financial QA — virattt/financial-qa-10K (next run)
+
+Replaces DocFinQA for now. Measured on DocFinQA validation (780 rows): median context 145,458 tokens, only 2.9% of
+answers survive truncation to 512 tokens, and BM25 top-3 retrieval finds the answer for 6.5% of questions.
+Keep DocFinQA for Phase 2 as a retrieval problem.
+
+- Data after the split: train 6,717 / val 840 / test 838 (20% added "unanswerable" in each), split by company.
+- Limits to report: answers appear LLM-generated, contexts are short (median 40 tokens), so this does not test
+  finding the passage in a full document. No licence is listed on the dataset page.
+- Run: `bash scripts/run_vast.sh`. Verified locally on 16 examples only; GPU path not yet run.
+- [ ] Base 0.5B · [ ] 0.5B + LoRA · [ ] 7B 4-bit · [ ] read 50 test answers by hand
+
 ## Phase 1C — XL-Sum summarization (next)
 
 ```bash

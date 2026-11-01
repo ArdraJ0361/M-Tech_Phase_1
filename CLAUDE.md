@@ -12,9 +12,12 @@ pip install -r requirements.txt
 python tests/smoke_test.py               # 9 end-to-end checks on CPU (downloads 0.5B model)
 python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml [--base_only|--eval_only]
 python notebooks/build_simple_notebook.py   # regenerate the Colab notebook
+python tests/test_fin10k.py              # fast offline checks: financial split, results CSV
+python src/training/run_pilot.py --config configs/dry_run_fin10k.yaml   # full pipeline on 16 examples
+bash scripts/run_vast.sh                 # full financial QA comparison on a rented GPU (use tmux)
 ```
 
-`tests/smoke_test.py` is the only test. Status and next steps: [docs/progress.md](docs/progress.md).
+Status and next steps: [docs/progress.md](docs/progress.md).
 
 ## Code map
 
@@ -33,7 +36,7 @@ Pipeline: config → dataset → tokenize → model + LoRA → train → evaluat
 | Results | [src/utils/experiment_tracker.py](src/utils/experiment_tracker.py) | `ExperimentTracker.log` → `experiments/results.csv` |
 | Extraction | [src/extraction/text_extractor.py](src/extraction/text_extractor.py) | `extract_text` (PDF/DOCX/image, OCR fallback), `chunk_text` — Phase 2 |
 
-Configs: [configs/](configs/) — `pilot_squad_qa.yaml`, `pilot_xlsum_summarization.yaml`, `llm_baseline_qwen7b.yaml`.
+Configs: [configs/](configs/) — `pilot_squad_qa.yaml`, `pilot_xlsum_summarization.yaml`, `llm_baseline_qwen7b.yaml`; financial QA: `pilot_fin10k_qa.yaml`, `llm_baseline_fin10k_qwen7b.yaml`, `dry_run_fin10k.yaml`. `pilot_docfinqa.yaml` and `pilot_fin_sentiment.yaml` do not work with the current loaders.
 Docs: [docs/architecture.md](docs/architecture.md) (full design), `problem_statement.md`, `dataset_notes.md`, `literature_notes.md`.
 
 ## Phase 1 results (SQuAD v2, 500 test, Colab T4, 2026-10-17)
@@ -45,6 +48,7 @@ Raw files: `experiments/simple/`. Walkthrough + demo Q&A: [docs/notebook_guide.m
 
 - All three compared runs use `seed: 42` and `model_variant: "base"` — same test examples, fair comparison.
 - SQuAD v2 has no test split: val and test are disjoint index ranges of HF `validation`.
+- financial-qa-10K has one split: split by ticker with a fixed seed (not `training.seed`), so test companies are unseen and every run shares one test set.
 - Loss only on completion tokens; examples whose answer is truncated away are skipped.
 - Report EM/F1 split into answerable / unanswerable.
 

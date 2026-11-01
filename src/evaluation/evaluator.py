@@ -12,13 +12,21 @@ reference from the labels.
 
 from __future__ import annotations
 
+import csv
 import logging
 import time
+from pathlib import Path
 
 import numpy as np
 import torch
 
-from .metrics import compute_qa_metrics, compute_rouge, compute_classification_metrics, compute_extraction_metrics
+from .metrics import (
+    compute_classification_metrics,
+    compute_extraction_metrics,
+    compute_qa_metrics,
+    compute_rouge,
+    normalize_answer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +109,26 @@ def evaluate_model(model, tokenizer, dataset, cfg: dict, batch_size: int = 8) ->
         return {}
 
     metrics = metric_fn(all_preds, all_refs)
+    # Exact match is too strict for sentence answers, so such configs also request ROUGE.
+    if task == "qa" and "rougeL" in cfg.get("evaluation", {}).get("metrics", []):
+        answerable = [(p, r) for p, r in zip(all_preds, all_refs) if normalize_answer(r) != "unanswerable"]
+        if answerable:
+            rouge = compute_rouge([p for p, _ in answerable], [r for _, r in answerable])
+            metrics.update({f"answerable_{k}": rouge[k] for k in ("rouge1", "rouge2", "rougeL")})
     metrics["avg_latency_ms"] = round(gen_seconds * 1000 / len(all_preds), 1)
     metrics["throughput_samples_per_s"] = round(len(all_preds) / gen_seconds, 2)
     metrics["_predictions"] = all_preds      # callers may save these for error analysis
     metrics["_references"] = all_refs
+    metrics["_prompts"] = [tokenizer.decode(p, skip_special_tokens=True) for p, _ in pairs]
     return metrics
+
+
+def save_predictions(metrics: dict, path: Path) -> dict:
+    """Write per-example outputs to a CSV and return the metrics without them."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["prompt", "reference", "prediction"])
+        writer.writerows(zip(metrics["_prompts"], metrics["_references"], metrics["_predictions"]))
+    logger.info("Predictions saved to %s", path)
+    return {k: v for k, v in metrics.items() if not k.startswith("_")}
