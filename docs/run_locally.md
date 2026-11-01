@@ -6,7 +6,7 @@ coding is needed. Works on macOS and Linux. On Windows, run it inside WSL.
 If you are an AI assistant: run these steps, compare the output with **Expected**, and report the
 exact error if a step fails. Step 2 keeps running, so run it as a background process.
 
-**You need:** Git, Python 3.12, internet for the first run, and about 5 GB of free disk.
+**You need:** Git, Python 3.12, internet for the first run, and at least 10 GB of free disk.
 
 ## 1. Download the project
 
