@@ -1,0 +1,2 @@
+# Keep Linux line endings on Windows checkouts, or bash fails with "invalid option name"
+*.sh text eol=lf
