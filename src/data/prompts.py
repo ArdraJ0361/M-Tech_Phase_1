@@ -20,7 +20,7 @@ import re
 
 UNANSWERABLE = "unanswerable"
 
-QA_SEPARATOR = "### Answer:\n"
+QA_SEPARATOR = "**Answer:**\n"
 SUMMARY_SEPARATOR = "### Summary:\n"
 
 _WS = re.compile(r"[ \t\r\f\v]+")
@@ -37,10 +37,21 @@ def clean_text(text: str) -> str:
 
 # --------------------------------------------------------------------------- QA
 def build_qa_prompt(context: str, question: str) -> str:
-    """Prompt for SQuAD v2 style extractive QA (ends with the answer header)."""
+    """
+    Instruction-style prompt for financial document QA.
+    Matches the inference template used at serving time exactly.
+    The prompt ends with the answer header; the model generates from there.
+    """
     return (
-        f"### Context:\n{clean_text(context)}\n\n"
-        f"### Question:\n{clean_text(question)}\n\n"
+        f"You are a senior business and finance analyst. "
+        f"Read the document content below and answer the user's question "
+        f"accurately and concisely.\n\n"
+        f"**Document Content:**\n{clean_text(context)}\n\n"
+        f"**Question:**\n{clean_text(question)}\n\n"
+        f"**Instructions:**\n"
+        f"- Answer only from the document content above.\n"
+        f"- If the answer is not in the document, reply with: unanswerable\n"
+        f"- Be concise. One sentence or a number is enough.\n\n"
         f"{QA_SEPARATOR}"
     )
 

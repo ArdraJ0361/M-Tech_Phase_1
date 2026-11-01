@@ -34,7 +34,8 @@ _IGNORE_INDEX = -100
 
 # These must match the last header line in each prompt template in dataset_loader.py
 _COMPLETION_SEPARATORS = [
-    "### Answer:\n",
+    "**Answer:**\n",       # financial QA prompt (instruction-style)
+    "### Answer:\n",       # legacy SQuAD prompt — kept for backwards compat
     "### Summary:\n",
     "### Category:\n",
     "### Extracted fields (key: value):\n",
