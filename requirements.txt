@@ -11,12 +11,6 @@ bitsandbytes>=0.43.0        # 4-bit / 8-bit loading (CUDA only)
 rouge-score>=0.1.2
 scikit-learn>=1.4.0
 
-# Document text extraction (Phase 2)
-pdfplumber>=0.11.0
-pymupdf>=1.24.0
-python-docx>=1.1.0
-pytesseract>=0.3.10         # needs the Tesseract binary installed
-
 # Serving
 fastapi>=0.111.0
 uvicorn>=0.29.0

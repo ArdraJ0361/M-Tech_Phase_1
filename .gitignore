@@ -26,12 +26,6 @@ env/
 experiments/*/
 !experiments/results.csv
 !experiments/.gitkeep
-# Keep the final Colab run's small result files (not checkpoints/adapter)
-!experiments/simple/
-experiments/simple/*
-!experiments/simple/results.csv
-!experiments/simple/predictions.csv
-!experiments/simple/train_log.json
 CLAUDE.md
 
 # HuggingFace cache

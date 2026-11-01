@@ -1,72 +1,60 @@
 # CLAUDE.md — Project Index
 
-M.Tech research project: PEFT (LoRA) fine-tuning of a small LM (Qwen1.5-0.5B) for document
-analysis, compared against the untuned SLM and a 7B LLM (Qwen1.5-7B) on identical test examples.
-Phase 1 = SQuAD v2 QA + XL-Sum summarization. Details: [README.md](README.md),
-status and results log: [docs/progress.md](docs/progress.md).
+M.Tech research project, financial QA branch: PEFT (LoRA) fine-tuning of Qwen1.5-0.5B, compared
+against the untuned model and Qwen1.5-7B on identical test examples, then served over HTTP.
+This branch holds fine-tuning and inference only. SQuAD, XL-Sum, the Colab notebook and PDF
+extraction are on `feat/joel-changes`. Results log: [docs/progress.md](docs/progress.md).
 
 ## Commands
 
 ```bash
-pip install -r requirements.txt
-python tests/smoke_test.py               # 9 end-to-end checks on CPU (downloads 0.5B model)
-python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml [--base_only|--eval_only]
-python notebooks/build_simple_notebook.py   # regenerate the Colab notebook
-python tests/test_fin10k.py              # fast offline checks: financial split, results CSV
-python src/training/run_pilot.py --config configs/dry_run_fin10k.yaml   # full pipeline on 16 examples
-bash scripts/run_vast.sh                 # full financial QA comparison on a rented GPU (use tmux)
+bash scripts/start_server.sh             # install on first run, host the model on localhost
 python -m src.serving.server --config configs/pilot_fin10k_qa.yaml   # HTTP endpoint, docs at /docs
+python tests/test_fin10k.py              # fast offline checks: financial split, results CSV
 python tests/test_server.py              # fast offline checks for the endpoint
+python scripts/test_markdown_docs.py     # model on Markdown documents, short and long
+python src/training/run_pilot.py --config configs/dry_run_fin10k.yaml   # full pipeline on 16 examples
+python src/training/run_pilot.py --config configs/pilot_fin10k_qa.yaml [--base_only|--eval_only]
+bash scripts/run_vast.sh                 # full comparison on a rented GPU (use tmux)
 ```
 
-Status and next steps: [docs/progress.md](docs/progress.md). Run the model locally from a fresh clone: [docs/run_locally.md](docs/run_locally.md).
+Run the model from a fresh clone: [docs/run_locally.md](docs/run_locally.md).
 
 ## Code map
 
-Pipeline: config → dataset → tokenize → model + LoRA → train → evaluate → log CSV.
+Pipeline: config → dataset → tokenize → model + LoRA → train → evaluate → log CSV → serve.
 
 | Stage | File | Key functions |
 |---|---|---|
 | Entry point | [src/training/run_pilot.py](src/training/run_pilot.py) | `main`, `_run_base_evaluation`, `_run_checkpoint_evaluation` |
 | Config | [src/utils/config_loader.py](src/utils/config_loader.py) | `load_config` (validates YAML) |
-| Data | [src/data/dataset_loader.py](src/data/dataset_loader.py) | `load_dataset_for_task` (qa/summarization/classification/extraction), `_subsample` (disjoint val/test from HF `validation`), `_save_test_indices` |
-| Prompts | [src/data/prompts.py](src/data/prompts.py) | `build_qa_prompt`, `build_summarization_prompt`, `qa_completion` — single source of prompt format |
-| Tokenize | [src/data/preprocessor.py](src/data/preprocessor.py) | `tokenize_qa`, `tokenize_seq2seq`, `_tokenize_prompt_completion` (prompt masked with -100) |
+| Data | [src/data/dataset_loader.py](src/data/dataset_loader.py) | `load_dataset_for_task`, `_load_fin10k`, `_split_fin10k`, `_save_test_indices` |
+| Prompts | [src/data/prompts.py](src/data/prompts.py) | `build_qa_prompt`, `qa_completion` — single source of prompt format |
+| Tokenize | [src/data/preprocessor.py](src/data/preprocessor.py) | `tokenize_qa`, `_tokenize_prompt_completion` (prompt masked with -100) |
 | Model | [src/training/model_loader.py](src/training/model_loader.py) | `load_tokenizer`, `load_base_model` (4/8-bit via `load_in_bits`), `attach_lora`, `load_peft_checkpoint` |
 | Train | [src/training/trainer.py](src/training/trainer.py) | `run_training` (HF Trainer) |
-| Evaluate | [src/evaluation/evaluator.py](src/evaluation/evaluator.py), [metrics.py](src/evaluation/metrics.py) | `evaluate_model` (+latency); `compute_qa_metrics` (EM/F1, answerable vs unanswerable), `compute_rouge` |
+| Evaluate | [src/evaluation/evaluator.py](src/evaluation/evaluator.py), [metrics.py](src/evaluation/metrics.py) | `evaluate_model` (+latency), `save_predictions`; `compute_qa_metrics` (EM/F1, answerable vs unanswerable), `compute_rouge` |
 | Results | [src/utils/experiment_tracker.py](src/utils/experiment_tracker.py) | `ExperimentTracker.log` → `experiments/results.csv` |
 | Serving | [src/serving/server.py](src/serving/server.py) | `create_app`, `answer_question` |
-| Extraction | [src/extraction/text_extractor.py](src/extraction/text_extractor.py) | `extract_text` (PDF/DOCX/image, OCR fallback), `chunk_text` — Phase 2 |
 
-Configs: [configs/](configs/) — `pilot_squad_qa.yaml`, `pilot_xlsum_summarization.yaml`, `llm_baseline_qwen7b.yaml`; financial QA: `pilot_fin10k_qa.yaml`, `llm_baseline_fin10k_qwen7b.yaml`, `dry_run_fin10k.yaml`. `pilot_docfinqa.yaml` and `pilot_fin_sentiment.yaml` do not work with the current loaders.
-Docs: [docs/architecture.md](docs/architecture.md) (full design), `problem_statement.md`, `dataset_notes.md`, `literature_notes.md`.
+Configs: [configs/](configs/) — `pilot_fin10k_qa.yaml`, `llm_baseline_fin10k_qwen7b.yaml`, `dry_run_fin10k.yaml`.
+The loaders still contain SQuAD and XL-Sum branches, which have no config on this branch.
 
-## Phase 1 results (SQuAD v2, 500 test, Colab T4, 2026-10-17)
+## Results (financial-qa-10K, 838 test questions, unseen companies, 2026-11-01)
 
-Base 0.5B EM 5.6 / F1 16.39 · **0.5B + LoRA EM 68.8 / F1 72.44** · 7B 4-bit EM 27.8 / F1 36.55.
-Raw files: `experiments/simple/`. Walkthrough + demo Q&A: [docs/notebook_guide.md](docs/notebook_guide.md).
+Answerable F1: base 0.5B 54.35 · **0.5B + LoRA 68.90** · 7B 4-bit 61.74.
+Unanswerable EM: 0.72 · **97.12** · 28.06. One seed; only LoRA was tuned.
 
 ## Invariants (don't break)
 
 - All three compared runs use `seed: 42` and `model_variant: "base"` — same test examples, fair comparison.
-- SQuAD v2 has no test split: val and test are disjoint index ranges of HF `validation`.
 - financial-qa-10K has one split: split by ticker with a fixed seed (not `training.seed`), so test companies are unseen and every run shares one test set.
 - Loss only on completion tokens; examples whose answer is truncated away are skipped.
 - Report EM/F1 split into answerable / unanswerable.
-
-## Notebooks / Colab
-
-- **`notebooks/simple_pipeline.ipynb` is the Colab (T4) experiment** for the SQuAD 3-way run. It is
-  generated by `python notebooks/build_simple_notebook.py` — edit the builder, not the .ipynb. It is
-  self-contained (does not import `src/`), one cell per architecture stage; run `DRY_RUN = True` first.
-- Colab quirks handled in Step 0: `torchao>=0.16` (peft refuses older), `HF_HUB_DISABLE_XET=1` (Xet
-  downloads stall and eat RAM on Colab).
+- Do not change `build_qa_prompt` without retesting: the adapter was trained on that wording.
 
 ## Results files
 
 - `experiments/results.csv` is reserved for real runs (`run_pilot.py`); it is tracked in git.
-- The smoke test logs to `experiments/smoke_test/` (gitignored). Notebook runs write `experiments/simple/`
-  (results.csv, predictions.csv, train_log.json are tracked).
-- Validation during training is scored by loss only (`prediction_loss_only=True`); keeping full-vocab
-  logits OOMs a T4. Test EM/F1 always come from generation via `evaluate_model()`.
+- In `experiments/fin10k/adapter/`, only `adapter_config.json` and `adapter_model.safetensors` are tracked, so a fresh clone can serve the model. Other experiment outputs are gitignored.
+- Validation during training is scored by loss only (`prediction_loss_only=True`). Test EM/F1 always come from generation via `evaluate_model()`.

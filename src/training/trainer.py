@@ -4,7 +4,7 @@ src/training/trainer.py
 Fine-tuning loop using HuggingFace Trainer + PEFT LoRA.
 
 Usage (via run_pilot.py):
-    python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml
+    python src/training/run_pilot.py --config configs/pilot_fin10k_qa.yaml
 """
 
 from __future__ import annotations

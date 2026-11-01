@@ -1,4 +1,8 @@
 # Architecture — Understanding the Project from the Ground Up
+
+> **This branch holds fine-tuning and inference only.** SQuAD, XL-Sum, the Colab notebook and PDF
+> extraction are on `feat/joel-changes`, so links to them below may not resolve here.
+
 ## M.Tech: Parameter-Efficient Fine-Tuning of Small Language Models for Document Analysis
 
 ---

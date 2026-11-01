@@ -4,13 +4,13 @@ src/training/run_pilot.py
 Command-line entry point for fine-tuning experiments.
 
 Usage:
-    python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml
+    python src/training/run_pilot.py --config configs/pilot_fin10k_qa.yaml
 
     # Evaluate only (skip training)
-    python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml --eval_only
+    python src/training/run_pilot.py --config configs/pilot_fin10k_qa.yaml --eval_only
     
     # Base model inference (no fine-tuning — for baseline comparison)
-    python src/training/run_pilot.py --config configs/pilot_squad_qa.yaml --base_only
+    python src/training/run_pilot.py --config configs/pilot_fin10k_qa.yaml --base_only
 """
 
 from __future__ import annotations
