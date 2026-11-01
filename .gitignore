@@ -48,3 +48,11 @@ Thumbs.db
 # IDE
 .vscode/settings.json
 .idea/
+
+# Only the two adapter files the server needs, so a fresh clone can run scripts/start_server.sh
+!experiments/fin10k/
+experiments/fin10k/*
+!experiments/fin10k/adapter/
+experiments/fin10k/adapter/*
+!experiments/fin10k/adapter/adapter_config.json
+!experiments/fin10k/adapter/adapter_model.safetensors

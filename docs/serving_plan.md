@@ -1,5 +1,8 @@
 # Serving Plan — Shareable Inference Endpoint for the PEFT-SLM
 
+> **Built:** see `src/serving/server.py`. It differs from this plan in two ways: it listens on
+> 127.0.0.1 by default, and exposing it to other machines requires `SERVING_API_KEY`.
+
 **Goal:** expose the fine-tuned LoRA checkpoint as an HTTP API so a panel
 demo, a colleague, or a UI can send a question + context and get an answer
 back — without touching training code.

@@ -68,8 +68,25 @@ Keep DocFinQA for Phase 2 as a retrieval problem.
 - Data after the split: train 6,717 / val 840 / test 838 (20% added "unanswerable" in each), split by company.
 - Limits to report: answers appear LLM-generated, contexts are short (median 40 tokens), so this does not test
   finding the passage in a full document. No licence is listed on the dataset page.
-- Run: `bash scripts/run_vast.sh`. Verified locally on 16 examples only; GPU path not yet run.
-- [ ] Base 0.5B · [ ] 0.5B + LoRA · [ ] 7B 4-bit · [ ] read 50 test answers by hand
+- Run: `bash scripts/run_vast.sh` (Vast.ai RTX 5060 Ti, 2026-11-01). Raw results: `experiments/results.csv`.
+
+| 838 test questions, 7 unseen companies | Base 0.5B | 0.5B + LoRA | 7B 4-bit |
+|---|---|---|---|
+| Answerable F1 (n=699) | 54.35 | **68.90** | 61.74 |
+| Answerable ROUGE-L | 51.73 | **66.68** | 58.57 |
+| Answerable EM | 2.43 | **17.88** | 5.15 |
+| Unanswerable EM (n=139) | 0.72 | **97.12** | 28.06 |
+| Overall F1 | 45.46 | **73.58** | 56.19 |
+| Latency per answer | 283 ms | **204 ms** | 864 ms |
+
+- LoRA: 15.7 min training, 4,859 MB peak GPU, 0.169% trainable. Validation loss flat at ~0.50 from epoch 1.4.
+- LoRA said "unanswerable" on 2 of 699 answerable questions. It can invent details the passage lacks.
+- Limits to report: one seed; only LoRA was trained for this prompt; unanswerable tests use another company's
+  passage, the same pattern LoRA trained on, so 97% is likely optimistic for real documents.
+- [x] Base 0.5B · [x] 0.5B + LoRA · [x] 7B 4-bit · [ ] read 50 test answers by hand
+
+Endpoint: `python -m src.serving.server --config configs/pilot_fin10k_qa.yaml` (`tests/test_server.py`).
+Through the server on a Mac, answerable F1 is 68.88 on the same test set (750/838 answers identical to the GPU run).
 
 ## Phase 1C — XL-Sum summarization (next)
 

@@ -15,9 +15,11 @@ python notebooks/build_simple_notebook.py   # regenerate the Colab notebook
 python tests/test_fin10k.py              # fast offline checks: financial split, results CSV
 python src/training/run_pilot.py --config configs/dry_run_fin10k.yaml   # full pipeline on 16 examples
 bash scripts/run_vast.sh                 # full financial QA comparison on a rented GPU (use tmux)
+python -m src.serving.server --config configs/pilot_fin10k_qa.yaml   # HTTP endpoint, docs at /docs
+python tests/test_server.py              # fast offline checks for the endpoint
 ```
 
-Status and next steps: [docs/progress.md](docs/progress.md).
+Status and next steps: [docs/progress.md](docs/progress.md). Run the model locally from a fresh clone: [docs/run_locally.md](docs/run_locally.md).
 
 ## Code map
 
@@ -34,6 +36,7 @@ Pipeline: config → dataset → tokenize → model + LoRA → train → evaluat
 | Train | [src/training/trainer.py](src/training/trainer.py) | `run_training` (HF Trainer) |
 | Evaluate | [src/evaluation/evaluator.py](src/evaluation/evaluator.py), [metrics.py](src/evaluation/metrics.py) | `evaluate_model` (+latency); `compute_qa_metrics` (EM/F1, answerable vs unanswerable), `compute_rouge` |
 | Results | [src/utils/experiment_tracker.py](src/utils/experiment_tracker.py) | `ExperimentTracker.log` → `experiments/results.csv` |
+| Serving | [src/serving/server.py](src/serving/server.py) | `create_app`, `answer_question` |
 | Extraction | [src/extraction/text_extractor.py](src/extraction/text_extractor.py) | `extract_text` (PDF/DOCX/image, OCR fallback), `chunk_text` — Phase 2 |
 
 Configs: [configs/](configs/) — `pilot_squad_qa.yaml`, `pilot_xlsum_summarization.yaml`, `llm_baseline_qwen7b.yaml`; financial QA: `pilot_fin10k_qa.yaml`, `llm_baseline_fin10k_qwen7b.yaml`, `dry_run_fin10k.yaml`. `pilot_docfinqa.yaml` and `pilot_fin_sentiment.yaml` do not work with the current loaders.
