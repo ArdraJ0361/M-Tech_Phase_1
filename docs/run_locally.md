@@ -8,6 +8,9 @@ exact error if a step fails. Step 2 keeps running, so run it as a background pro
 
 **You need:** Git, Python 3.12, internet for the first run, and at least 10 GB of free disk.
 
+**On Windows:** run every command in the **Ubuntu (WSL)** terminal, not PowerShell. Start with `cd ~`
+so the project is in your Linux home folder, not in `C:` or OneDrive.
+
 ## 1. Download the project
 
 ```bash
@@ -76,6 +79,8 @@ Press **Ctrl+C** in the terminal from step 2. To start again, run step 2 again f
 | `Python 3.12 is required` | Install it from https://www.python.org/downloads/, then repeat step 2. |
 | `experiments/fin10k/adapter is missing` | Run `git pull`, then repeat step 2. |
 | `git clone` asks for a login or fails | Ask Joel for access to the repository. |
+| `No module named pip` | Run `git pull`, delete the `.venv` folder, then repeat step 2. |
+| `Could not acquire lock` or `is another uv process running?` | Run `pkill uv`, then repeat step 2. |
 | Package install fails | Send the error to Joel. |
 
 ## Rules for AI assistants

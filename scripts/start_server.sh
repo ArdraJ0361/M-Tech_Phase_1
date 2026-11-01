@@ -9,10 +9,17 @@ if [ ! -f experiments/fin10k/adapter/adapter_model.safetensors ]; then
   exit 1
 fi
 
+case "$PWD" in
+  /mnt/*|*OneDrive*)
+    echo "WARNING: this folder is on Windows or OneDrive, which makes the install slow and syncs several GB." >&2
+    echo "         Better: run 'cd ~' in Ubuntu and clone the project there." >&2
+    ;;
+esac
+
 if [ ! -x .venv/bin/python ]; then
   echo "==> Creating Python environment"
   if command -v uv >/dev/null; then
-    uv venv --python 3.12 .venv
+    uv venv --seed --python 3.12 .venv
   elif command -v python3.12 >/dev/null; then
     python3.12 -m venv .venv
   elif command -v python3.11 >/dev/null; then
@@ -26,10 +33,17 @@ fi
 if [ ! -f .venv/.installed ] || [ requirements.txt -nt .venv/.installed ]; then
   echo "==> Installing packages (first run only, can take several minutes)"
   if command -v uv >/dev/null; then
-    uv pip install --python .venv/bin/python -r requirements.txt
+    INSTALL=(uv pip install --python .venv/bin/python)
   else
-    .venv/bin/python -m pip install -r requirements.txt
+    .venv/bin/python -m pip --version >/dev/null 2>&1 || .venv/bin/python -m ensurepip --upgrade
+    INSTALL=(.venv/bin/python -m pip install)
   fi
+  # Without an NVIDIA GPU, skip the several GB of CUDA packages torch pulls in on Linux.
+  if [ "$(uname)" = Linux ] && ! command -v nvidia-smi >/dev/null; then
+    "${INSTALL[@]}" "$(grep '^torch==' requirements.txt)" --index-url https://download.pytorch.org/whl/cpu \
+      || echo "==> CPU-only torch not available, using the default package"
+  fi
+  "${INSTALL[@]}" -r requirements.txt
   touch .venv/.installed
 fi
 
